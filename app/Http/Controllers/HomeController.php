@@ -4,18 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 
+use App\Service;
+use App\ConnectedServices;
+use Symfony\Component\HttpFoundation\Response;
+
 class HomeController extends Controller
 {
-    /**
-     * Create a new controller instance.
-     *
-     * @return void
-     */
-    public function __construct()
-    {
-        $this->middleware('auth');
-    }
-
     /**
      * Show the application dashboard.
      *
@@ -23,6 +17,21 @@ class HomeController extends Controller
      */
     public function index()
     {
-        return view('home');
+        $services = Service::all();
+        return view('home',compact('services'));
+    }
+
+    /*
+     *
+     */
+    public function getConnectedService(Request $request) {
+        if($request->ajax()) {
+            $connectedServices = ConnectedServices::where('service_id',$request->get('serviceId'))->get();
+            $availableServices = [];
+            foreach ($connectedServices as $serviceId) {
+                $availableServices[] = $serviceId->connected_service_id;
+            }
+            return response()->json($availableServices);
+        }
     }
 }

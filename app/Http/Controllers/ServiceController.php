@@ -9,6 +9,16 @@ use Illuminate\Http\Request;
 class ServiceController extends Controller
 {
     /**
+     * Create a new controller instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
+    /**
      * Display a listing of the resource.
      *
      * @return \Illuminate\Http\Response
@@ -40,6 +50,11 @@ class ServiceController extends Controller
      */
     public function store(Request $request)
     {
+        $validatedData = $request->validate([
+            'name' => ['required', 'unique:services', 'max:255'],
+            'description' => ['required'],
+        ]);
+
         try {
             $service =Service::create( ['name' => $request['name'],'description'=>$request['description']] );
             if(!empty($request['connected_services_id'])) {
@@ -51,13 +66,13 @@ class ServiceController extends Controller
             }
 
             $message = "Service created successfully !";
-            $success = true;
+            $messageType = 1;
         } catch(\Illuminate\Database\QueryException $ex){
-            $success = false;
+            $messageType = 2;
             $message = "Service creation failed !";
         }
 
-        return redirect(url("/services"))->with('success',$success)->with('message',$message);
+        return redirect(url("/services"))->with(['messageType'=>$messageType,'message'=>$message]);
     }
 
     /**
@@ -68,7 +83,7 @@ class ServiceController extends Controller
      */
     public function show(Service $service)
     {
-        //
+        echo "Show";die;
     }
 
     /**
@@ -79,7 +94,15 @@ class ServiceController extends Controller
      */
     public function edit(Service $service)
     {
-        //
+        $connectedServicesIds = [];
+        $connectedServices = $service->connectedServices;
+        foreach ($connectedServices as $serviceId) {
+            $connectedServicesIds[] = $serviceId->connected_service_id;
+        }
+
+        $services = Service::where('id', '!=' , $service->id)->get();
+
+        return view('service.edit',compact('service','connectedServicesIds','services'));
     }
 
     /**
@@ -91,7 +114,30 @@ class ServiceController extends Controller
      */
     public function update(Request $request, Service $service)
     {
-        //
+        $validatedData = $request->validate([
+            'name' => ['required', 'unique:services', 'max:255'],
+            'description' => ['required'],
+        ]);
+
+        try {
+            $service->update( ['name' => $request['name'],'description'=>$request['description']] );
+            if(!empty($request['connected_services_id'])) {
+                ConnectedServices::where('service_id', $service->id)->delete();
+                foreach ($request['connected_services_id'] as $key => $value) {
+                    $data[$key]['service_id'] = $service->id;
+                    $data[$key]['connected_service_id'] = $value;
+                }
+                ConnectedServices::insert($data);
+            }
+
+            $message = "Service created successfully !";
+            $messageType = 1;
+        } catch(\Illuminate\Database\QueryException $ex){
+            $messageType = 2;
+            $message = "Service creation failed !";
+        }
+
+        return redirect(url("/services"))->with('messageType', $messageType)->with('message', $message);
     }
 
     /**
@@ -102,6 +148,10 @@ class ServiceController extends Controller
      */
     public function destroy(Service $service)
     {
-        //
+        try {
+            $service->delete();
+        } catch (\Illuminate\Database\QueryException $ex){}
+
+        return redirect(url("/services"));
     }
 }

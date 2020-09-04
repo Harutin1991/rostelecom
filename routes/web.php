@@ -11,13 +11,12 @@
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', 'HomeController@index');
 
 Auth::routes();
 
 Route::get('/admin', 'AdminController@index')->name('admin');
 
 Route::resource('services','ServiceController');
+Route::post('ajax-request', 'HomeController@getConnectedService');
 
